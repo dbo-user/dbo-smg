@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Head section contains Title, meta(custom attributes), links(links to resourses), scripts(code), and CSS(style) -->
+  <!-- Get Tiny URL --> 
+<!-- Basic code objectives:
+1. Display user interface
+2. Establish connection to firebase storage
+3. Upload files to firebase
+4. Get long URL from firebase
+5. Create short Url and link it to long URL
+6. Display short URL
+ -->
+
+  <title>Get Tiny URL</title>
+  <meta charset="utf-8"> <!--  capable of encoding all possible characters -->
+<!-- viewport is the visible area of the page, width is the full screen width, scale is the zoom level -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- min.css contains the CSS necessary for the Bootstrap to work correctly -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
+<!-- The purpose of jQuery is to make it much easier to use JavaScript on your website. -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<!-- Bootstrap makes responsive design easier, min. js contains javascript code necessary for running Bootstrap -->
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+  
+  
+<!-- CSS -->
+  <style>
+  body {
+    font: 20px Montserrat, sans-serif;
+    line-height: 1.8; /* 1.8 * font size */ 
+    color: #f5f6f7; /* almost white text color */
+    min-height: 100vh; /* 100% of the viewport height */
+    width: 100%; /* total width will be 100% of its containing block plus any horizontal margin, padding and border */
+  }
+  p {font-size: 16px;}
+  .margin {margin-bottom: 45px; /* space between elements */}
+  
+
+.container-fluid { /* main container */
+    padding-top: 70px; /* space inside the element */
+    padding-bottom: 70px;
+  }
+.bg-1 { 
+    background-color: #1abc9c; /* Green main container*/
+    color: #ffffff; /* white letters */
+  }
+  
+  .navbar { /* for logo, no menu items to display */
+    padding-top: 15px;
+    padding-bottom: 15px;
+    border: 0; /* zero width */
+    border-radius: 0;
+    margin-bottom: 0;
+    font-size: 12px;
+    letter-spacing: 5px; /* space between letters */
+  }
+  .navbar-nav  li a:hover {
+    color: #1abc9c !important; /* apply this rule and ignore the other color rules for the navbar-nav */
+  }
+  
+#progress { /* progress bar */
+    -webkit-appearance: none; /* no special style */
+    appearance: none;
+    width: 50%;
+    margin-bottom: 10px;
+}
+#files { /* choose files button */
+    width: 50%; /* this line has no effect, 50% usually means half the width of the element */
+    margin: auto; /* horizontally center the element within its container */
+    margin-bottom:-40px;
+}
+#send { /* upload button */
+  background-color: #fff; 
+  border: 1px solid #000;
+  color: #000;
+  padding-left:  30px;
+  padding-right: 30px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 18px;
+}
+a { /* shortUrl link */
+  text-decoration: none;
+  color: #000;
+}
+  </style>
+<!-- End CSS -->
+</head>
+
+<!-- body main content that is rendered -->
+<body>
+
+
+<!-- Navbar -->
+<nav class="navbar navbar-default">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>                        
+      </button>
+      <a class="navbar-brand" href="#">tiny<img src="pngwave.png" alt="tiny" style="width:80px;height:80px;"></a>
+    </div> <!-- end navbar-header -->
+    
+  </div>
+</nav> <!-- end navbar -->
+
+<!-- 1. User interface -->
+
+<!-- Main Container -->
+<div class="container-fluid bg-1 text-center">
+  <h3 class="margin">Get Tiny URL, first upload a file</h3>
+  <progress value="0" max="100" id="progress"></progress> 
+  <input type="file" id="files" multiple /><br /><br /><!-- multiple attribute allows multiple files selection -->
+  <button id="send">Upload</button>
+  <p id="uploading"></p><!-- line for upload to firebase success message -->  
+  <p id="tiny"></p><!-- line to display the tiny URL -->  
+</div>
+<!-- End Main Container -->
+
+
+<!-- 2. Establish firebase connection -->
+<!-- code copied from firebase when you add and then register a web project
+ console.firebase.google.com -->
+
+<!-- The core Firebase JS SDK is always required and must be listed first -->
+<script src="https://www.gstatic.com/firebasejs/7.23.0/firebase-app.js"></script>
+
+<!-- TODO: Add SDKs for Firebase products that you want to use -->
+<script src="https://www.gstatic.com/firebasejs/7.13.1/firebase-storage.js"></script>
+
+<script>
+  // Your web app's Firebase configuration
+  var firebaseConfig = { 
+    apiKey:  "env.apikey",
+    authDomain: "env.authdomain",
+    databaseURL: "env.databaseurl",
+    projectId: "env.projectid",
+    storageBucket: "smg-upload.appspot.com",
+    messagingSenderId: "env.messagingsenderid",
+    appId: "env.appid"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+</script>
+
+
+
+<script>
+var files = []; // empty array used to store file names
+// listen for change event for the Choose Files input button, fires after change has occurred
+document.getElementById("files").addEventListener("change", function(e) {
+  // e is the object created from the Event and you can access it with e.target
+  files = e.target.files;
+  for (let i = 0; i < files.length; i++) {
+    console.log(files[i]); // display file info in console
+  } // end for loop
+}); // end of getElementById
+
+// 3. Upload files to firebase
+
+// listen for a click event for the Upload button
+document.getElementById("send").addEventListener("click", function() {
+  //checks if files are selected
+  if (files.length !== 0) { // not zero so a file was selected
+    //Loops through all the selected files
+    for (let i = 0; i < files.length; i++) {
+      //create a storage reference
+        var storage = firebase.storage().ref(files[i].name);
+	//console.log(`${storage}`);
+      //upload file to firebase storage using put method
+      var upload = storage.put(files[i]);
+	
+	// monitor the file upload, snapshot is an object created from the upload
+      //update progress bar
+      upload.on(
+        "state_changed",
+        function progress(snapshot) {
+          var percentage =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          document.getElementById("progress").value = percentage;
+          // value is an attribute of the progress bar and percentage is number that is being updated until it reaches 100
+          // bytesTransferred is bytes uploaded so far and totalBytes is the total bytes expected to be uploaded
+        },
+
+        function error() {
+          alert(`An error occurred uploading ${files[i].name} to firebase storage.`);
+        },
+
+        function complete() {
+          document.getElementById(
+            "uploading"
+          ).innerHTML += `<br/>${files[i].name} upoaded successfully to firebase storage.<br/>`;
+
+      // 4. Get long URL from firebase
+        getFileUrl(`${files[i].name}`); // call function to get long url from firebase
+        
+        } // end function complete
+      ); // end upload.on
+    } // end for loop
+  } else { // no file selected
+    alert("Wait....No file was chosen to upload.");
+  } // end if/else files selected
+}); // end of getElementById("send")
+
+
+
+function getFileUrl(filename) {
+  //create a storage reference
+  var storage = firebase.storage().ref(filename);
+
+  //get file long url from firebase
+  storage
+    .getDownloadURL()
+    .then(function(url) {
+	
+	    var longUrl = url; // assign long url to longUrl
+
+      // 5. Create shortUrl and link it to long URL
+      let shortyUrl = getShortUrl();
+      console.log('longUrl is '+ longUrl);
+      console.log('shortUrl is https://app.io/'+ shortyUrl);
+      let shorty = "https://app.io/"+shortyUrl;
+      let shortLink = shorty.link(`${longUrl}`); // shortUrl redirects to longUrl web address
+      // 6. Display shortUrl as a link
+      document.getElementById( "tiny" ).innerHTML += `<br/>The Tiny URL (click) ${shortLink}<br/>`;
+    })
+    .catch(function(error) {
+      console.log("Long URL file error encountered in function getFileUrl.");
+    });
+  
+} // end getFileUrl function
+
+// Create short string for the short Url
+function getShortUrl() {
+  // Math.random() returns a random number between 0 (inclusive), and 1 (exclusive)
+  // toString(32) converts number to string using the 32 base number system
+  // substring extracts characters 2 to 5 exclusive
+  let short_url = Math.random().toString(32).substring(2, 5) + Math.random().toString(32).substring(2, 5);
+  return short_url;
+} // end getShortUrl function
+
+// end javascript code
+</script>
+
+</body>
+</html>
